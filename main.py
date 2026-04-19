@@ -1,40 +1,34 @@
+import argparse
 from scanner.headers import check_headers
 
 
 def main():
-    print("=" * 50)
-    print("        VulnScope - Security Scanner")
-    print("=" * 50)
+    parser = argparse.ArgumentParser(
+        description="VulnScope - HTTP Security Header Analyzer"
+    )
 
-    while True:
-        url = input("\nEnter target URL (or 'exit' to quit): ").strip()
+    parser.add_argument("--url", help="Target URL to scan")
 
-        # Exit condition
-        if url.lower() == "exit":
-            print("\nExiting VulnScope...")
-            break
+    args = parser.parse_args()
 
-        # Validate empty input
-        if not url:
-            print("[!] Please enter a valid URL")
-            continue
+    if not args.url:
+        print("[!] Please provide a URL using --url")
+        print("Example: python main.py --url https://example.com")
+        return
 
-        # Auto-add scheme if missing
-        if not url.startswith(("http://", "https://")):
-            url = "http://" + url
+    url = args.url.strip()
 
-        # Run scanner
-        result = check_headers(url)
+    if not url.startswith(("http://", "https://")):
+        url = "http://" + url
 
-        # Handle result safely
-        if result and isinstance(result, dict):
-            print("\n--- Scan Summary ---")
-            print(f"Target URL     : {result.get('url', url)}")
-            print(f"Headers Present: {len(result.get('present', []))}")
-            print(f"Headers Missing: {len(result.get('missing', []))}")
-            print("-" * 30)
-        else:
-            print("[!] Failed to retrieve scan results")
+    result = check_headers(url)
+
+    if result:
+        print("\n--- Summary ---")
+        print(f"Target URL     : {result.get('url')}")
+        print(f"Headers Present: {len(result.get('present', []))}")
+        print(f"Headers Missing: {len(result.get('missing', []))}")
+        print("-" * 30)
 
 
 if __name__ == "__main__":

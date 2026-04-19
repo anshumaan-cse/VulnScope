@@ -1,7 +1,5 @@
 import argparse
 import json
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
 from scanner.headers import check_headers
 
 
@@ -14,22 +12,6 @@ def load_urls(file_path):
         return []
 
 
-def run_parallel(urls, threads):
-    results = []
-
-    with ThreadPoolExecutor(max_workers=threads) as executor:
-        future_to_url = {
-            executor.submit(check_headers, url): url for url in urls
-        }
-
-        for future in as_completed(future_to_url):
-            result = future.result()
-            if result:
-                results.append(result)
-
-    return results
-
-
 def main():
     parser = argparse.ArgumentParser(
         description="VulnScope - HTTP Security Header Analyzer"
@@ -37,24 +19,21 @@ def main():
 
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--url", help="Scan a single URL")
-    group.add_argument("--file", help="Scan multiple URLs from file")
-
-    parser.add_argument("--threads", type=int, default=5,
-                        help="Number of concurrent scans (default: 5)")
+    group.add_argument("--file", help="Scan URLs from file")
 
     parser.add_argument("--output", default="report.json",
-                        help="Output JSON file name")
+                        help="Output report file")
 
     args = parser.parse_args()
 
-    # Load URLs
+    # Get URLs
     if args.url:
         urls = [args.url.strip()]
     else:
         urls = load_urls(args.file)
 
     if not urls:
-        print("[!] No valid URLs to scan")
+        print("[!] No valid URLs")
         return
 
     # Normalize URLs
@@ -63,23 +42,26 @@ def main():
         for u in urls
     ]
 
-    print("=" * 60)
-    print("VulnScope - Advanced Security Scanner")
-    print("=" * 60)
+    print("=" * 50)
+    print("VulnScope - Security Scanner")
+    print("=" * 50)
 
-    # Run scans
-    results = run_parallel(urls, args.threads)
+    results = []
+
+    for url in urls:
+        result = check_headers(url)
+        if result:
+            results.append(result)
 
     # Save report
-    try:
+    if results:
         with open(args.output, "w") as f:
             json.dump(results, f, indent=4)
 
         print(f"\n[+] Report saved as: {args.output}")
+    else:
+        print("[!] No results to save")
 
-    except Exception as e:
-        print(f"[ERROR] Failed to save report: {e}")
 
-
-if __name__ == "__main__":
+if _name_ == "_main_":
     main()

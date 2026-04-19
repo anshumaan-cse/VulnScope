@@ -4,12 +4,54 @@ from colorama import Fore, init
 # Initialize colorama
 init(autoreset=True)
 
+# Security headers configuration
+SECURITY_HEADERS = {
+    "Content-Security-Policy": {
+        "risk": "HIGH",
+        "weight": 2,
+        "info": "Prevents XSS and data injection attacks"
+    },
+    "Strict-Transport-Security": {
+        "risk": "HIGH",
+        "weight": 2,
+        "info": "Forces HTTPS to prevent MITM attacks"
+    },
+    "X-Frame-Options": {
+        "risk": "MEDIUM",
+        "weight": 1,
+        "info": "Prevents clickjacking attacks"
+    },
+    "X-Content-Type-Options": {
+        "risk": "MEDIUM",
+        "weight": 1,
+        "info": "Prevents MIME sniffing"
+    },
+    "Referrer-Policy": {
+        "risk": "LOW",
+        "weight": 1,
+        "info": "Controls referrer information leakage"
+    },
+    "Permissions-Policy": {
+        "risk": "LOW",
+        "weight": 1,
+        "info": "Restricts browser features"
+    }
+}
+
 
 def check_headers(url):
-    try:
-        print(Fore.CYAN + f"\n[+] Scanning: {url}\n")
+    result = {
+        "url": url,
+        "present": [],
+        "missing": [],
+        "score": 0,
+        "max_score": sum(h["weight"] for h in SECURITY_HEADERS.values())
+    }
 
-        # Send request with timeout + custom User-Agent
+    try:
+        print(Fore.CYAN + f"\n[+] Scanning: {url}")
+
+        # Send request
         response = requests.get(
             url,
             timeout=5,
@@ -18,65 +60,33 @@ def check_headers(url):
 
         headers = response.headers
 
-        # Basic info
-        print(f"Status Code: {response.status_code}")
-        print(f"Server: {headers.get('Server', 'Unknown')}\n")
-
         print(Fore.YELLOW + "\n[+] Security Headers Analysis:\n")
 
-        # Security headers dictionary
-        security_headers = {
-            "Content-Security-Policy": {
-                "risk": "HIGH",
-                "info": "Prevents XSS and data injection attacks"
-            },
-            "Strict-Transport-Security": {
-                "risk": "HIGH",
-                "info": "Forces HTTPS to prevent MITM attacks"
-            },
-            "X-Frame-Options": {
-                "risk": "MEDIUM",
-                "info": "Prevents clickjacking attacks"
-            },
-            "X-Content-Type-Options": {
-                "risk": "LOW",
-                "info": "Prevents MIME sniffing"
-            },
-            "Referrer-Policy": {
-                "risk": "LOW",
-                "info": "Controls referrer information leakage"
-            },
-            "Permissions-Policy": {
-                "risk": "MEDIUM",
-                "info": "Restricts browser features"
-            }
-        }
-
-        score = 0
-        total = len(security_headers)
-
-        # Check headers
-        for header, details in security_headers.items():
+        for header, details in SECURITY_HEADERS.items():
             if header in headers:
-                print(Fore.GREEN + f"[OK] {header} present")
-                score += 1
+                print(Fore.GREEN + f"[OK] {header}")
+                result["present"].append(header)
+                result["score"] += details["weight"]
             else:
                 color = Fore.RED if details["risk"] == "HIGH" else Fore.YELLOW
-                print(
-                    color +
-                    f"[MISSING] {header} ({details['risk']} RISK)\n"
-                    f"   ↳ {details['info']}"
-                )
+                print(color + f"[MISSING] {header} ({details['risk']})")
+                print(f"   ↳ {details['info']}")
+                result["missing"].append(header)
 
-        # Score summary
-        print("\n" + Fore.CYAN + f"[+] Security Score: {score}/{total}")
+        # Calculate percentage score
+        percentage = (result["score"] / result["max_score"]) * 100
 
-        if score == total:
-            print(Fore.GREEN + "[✔] Excellent security configuration")
-        elif score >= total // 2:
-            print(Fore.YELLOW + "[!] Moderate security - needs improvement")
+        print(Fore.CYAN + f"\n[+] Security Score: {percentage:.1f}%")
+
+        if percentage > 85:
+            print(Fore.GREEN + "✔ Strong security posture")
+        elif percentage > 60:
+            print(Fore.YELLOW + "⚠ Moderate security")
         else:
-            print(Fore.RED + "[✘] Poor security configuration")
+            print(Fore.RED + "✘ Weak security")
+
+        return result
 
     except requests.exceptions.RequestException:
         print(Fore.RED + "[ERROR] Unable to connect to target")
+        return None

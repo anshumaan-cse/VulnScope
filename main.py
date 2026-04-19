@@ -1,22 +1,22 @@
 from scanner.headers import check_headers
 
 def main():
-    try:
-        with open("urls.txt", "r") as file:
-            urls = file.readlines()
+    print("=" * 50)
+    print("        VulnScope - Security Scanner")
+    print("=" * 50)
 
-        for url in urls:
-            url = url.strip()
+    while True:
+        url = input("\nEnter target URL (or 'exit' to quit): ").strip()
 
-            if url:
-                print("\n" + "=" * 50)
-                print(f"Scanning: {url}")
-                print("=" * 50)
+        if url.lower() == "exit":
+            print("\nExiting VulnScope...")
+            break
 
-                check_headers(url)
+        if not url.startswith("http"):
+            url = "http://" + url
 
-    except FileNotFoundError:
-        print("Error: urls.txt file not found")
+        check_headers(url)
+
 
 if __name__ == "__main__":
     main()
